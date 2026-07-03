@@ -1,0 +1,17 @@
+name: honeycube_game_audio
+description: Shared audio service package for Honeycube Flutter and Flame games.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  audioplayers: ^6.8.1
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
