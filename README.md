@@ -5,16 +5,23 @@ Shared audio service package for Honeycube Flutter and Flame games.
 This package intentionally does not provide a singleton or service locator.
 Game code owns cue IDs and game-specific event mapping.
 
+## Reference Projects
+
+This package is currently referenced by:
+
+- `C:\Workspaces\honeycube-kr\brick-square`
+- `C:\Workspaces\honeycube-kr\hide-n-seek-escape`
+
 ```dart
-final audio = AudioService(
-  backend: AudioplayersAudioBackend(),
-  catalog: AudioCatalog(
+final audio = HCAudioService(
+  backend: HCAudioplayersAudioBackend(),
+  catalog: HCAudioCatalog(
     sfx: {
-      'ui_button': AudioCue.assets([
+      'ui_button': HCAudioCue.assets([
         'sounds/ui_button_1.wav',
         'sounds/ui_button_2.wav',
       ]),
-      'footstep': AudioCue.asset('sounds/footstep.wav', maxInstances: 1),
+      'footstep': HCAudioCue.asset('sounds/footstep.wav', maxInstances: 1),
     },
   ),
   maxConcurrentSfx: 6,

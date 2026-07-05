@@ -3,15 +3,15 @@ import 'package:honeycube_game_audio/honeycube_game_audio.dart';
 
 void main() {
   test(
-    'FlameAudioAdapter forwards preload pause and resume to AudioService',
+    'HCFlameAudioAdapter forwards preload pause and resume to HCAudioService',
     () async {
-      final catalog = AudioCatalog(
-        bgm: {'gameplay': AudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
-        sfx: {'ui_button': AudioCue.asset('assets/sounds/ui_button.wav')},
+      final catalog = HCAudioCatalog(
+        bgm: {'gameplay': HCAudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
+        sfx: {'ui_button': HCAudioCue.asset('assets/sounds/ui_button.wav')},
       );
       final backend = _FakeAudioBackend();
-      final audio = AudioService(backend: backend, catalog: catalog);
-      final adapter = FlameAudioAdapter(audio);
+      final audio = HCAudioService(backend: backend, catalog: catalog);
+      final adapter = HCFlameAudioAdapter(audio);
 
       await adapter.onLoad();
       await adapter.onPause();
@@ -27,17 +27,17 @@ void main() {
   );
 }
 
-final class _FakeAudioBackend implements AudioBackend {
+final class _FakeAudioBackend implements HCAudioBackend {
   final calls = <String>[];
 
   @override
-  Future<void> preload(AudioCue cue) async {
+  Future<void> preload(HCAudioCue cue) async {
     calls.add('preload:${cue.assetPath}');
   }
 
   @override
   Future<void> playBgm(
-    AudioCue cue, {
+    HCAudioCue cue, {
     required double volume,
     required bool loop,
   }) async {}
@@ -46,11 +46,11 @@ final class _FakeAudioBackend implements AudioBackend {
   Future<void> setBgmVolume(double volume) async {}
 
   @override
-  Future<void> playSfx(AudioCue cue, {required double volume}) async {}
+  Future<void> playSfx(HCAudioCue cue, {required double volume}) async {}
 
   @override
-  Future<AudioLoopHandle> playLoopingSfx(
-    AudioCue cue, {
+  Future<HCAudioLoopHandle> playLoopingSfx(
+    HCAudioCue cue, {
     required double volume,
   }) async {
     return _FakeAudioLoopHandle();
@@ -78,7 +78,7 @@ final class _FakeAudioBackend implements AudioBackend {
   Future<void> dispose() async {}
 }
 
-final class _FakeAudioLoopHandle implements AudioLoopHandle {
+final class _FakeAudioLoopHandle implements HCAudioLoopHandle {
   @override
   Future<void> stop() async {}
 }

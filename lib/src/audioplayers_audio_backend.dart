@@ -4,31 +4,31 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:honeycube_game_audio/src/audio_backend.dart';
 import 'package:honeycube_game_audio/src/audio_cue.dart';
 
-final class AudioplayersAudioBackend implements AudioBackend {
-  AudioplayersAudioBackend({
+final class HCAudioplayersAudioBackend implements HCAudioBackend {
+  HCAudioplayersAudioBackend({
     AudioCache? cache,
-    AudioplayersAudioPlayerFactory? playerFactory,
+    HCAudioplayersAudioPlayerFactory? playerFactory,
   }) : _cache = cache ?? AudioCache(prefix: 'assets/'),
        _playerFactory =
            playerFactory ??
-           (() => DefaultAudioplayersAudioPlayer(AudioPlayer()));
+           (() => HCDefaultAudioplayersAudioPlayer(AudioPlayer()));
 
   final AudioCache _cache;
-  final AudioplayersAudioPlayerFactory _playerFactory;
-  AudioplayersAudioPlayer? _bgmPlayer;
-  final Set<AudioplayersAudioPlayer> _sfxPlayers = {};
+  final HCAudioplayersAudioPlayerFactory _playerFactory;
+  HCAudioplayersAudioPlayer? _bgmPlayer;
+  final Set<HCAudioplayersAudioPlayer> _sfxPlayers = {};
   final Set<_LoopingSfxHandle> _loopingSfxHandles = {};
   final Completer<void> _disposed = Completer<void>();
   Completer<void> _sfxStopped = Completer<void>();
 
   @override
-  Future<void> preload(AudioCue cue) async {
+  Future<void> preload(HCAudioCue cue) async {
     await _cache.load(_assetPath(cue));
   }
 
   @override
   Future<void> playBgm(
-    AudioCue cue, {
+    HCAudioCue cue, {
     required double volume,
     required bool loop,
   }) async {
@@ -48,7 +48,7 @@ final class AudioplayersAudioBackend implements AudioBackend {
   }
 
   @override
-  Future<void> playSfx(AudioCue cue, {required double volume}) async {
+  Future<void> playSfx(HCAudioCue cue, {required double volume}) async {
     final player = _createPlayer();
     _sfxPlayers.add(player);
     final sfxStopped = _sfxStopped.future;
@@ -69,8 +69,8 @@ final class AudioplayersAudioBackend implements AudioBackend {
   }
 
   @override
-  Future<AudioLoopHandle> playLoopingSfx(
-    AudioCue cue, {
+  Future<HCAudioLoopHandle> playLoopingSfx(
+    HCAudioCue cue, {
     required double volume,
   }) async {
     final player = _createPlayer();
@@ -152,26 +152,26 @@ final class AudioplayersAudioBackend implements AudioBackend {
     ]);
   }
 
-  AudioplayersAudioPlayer _bgmPlayerOrCreate() {
+  HCAudioplayersAudioPlayer _bgmPlayerOrCreate() {
     return _bgmPlayer ??= _createPlayer();
   }
 
-  AudioplayersAudioPlayer _createPlayer() {
+  HCAudioplayersAudioPlayer _createPlayer() {
     return _playerFactory()..audioCache = _cache;
   }
 
-  AssetSource _assetSource(AudioCue cue) => AssetSource(_assetPath(cue));
+  AssetSource _assetSource(HCAudioCue cue) => AssetSource(_assetPath(cue));
 
-  String _assetPath(AudioCue cue) {
+  String _assetPath(HCAudioCue cue) {
     const prefix = 'assets/';
     final path = cue.assetPath;
     return path.startsWith(prefix) ? path.substring(prefix.length) : path;
   }
 }
 
-typedef AudioplayersAudioPlayerFactory = AudioplayersAudioPlayer Function();
+typedef HCAudioplayersAudioPlayerFactory = HCAudioplayersAudioPlayer Function();
 
-abstract interface class AudioplayersAudioPlayer {
+abstract interface class HCAudioplayersAudioPlayer {
   AudioCache get audioCache;
   set audioCache(AudioCache cache);
   Stream<void> get onPlayerComplete;
@@ -186,8 +186,9 @@ abstract interface class AudioplayersAudioPlayer {
   Future<void> setVolume(double volume);
 }
 
-final class DefaultAudioplayersAudioPlayer implements AudioplayersAudioPlayer {
-  DefaultAudioplayersAudioPlayer(this._player);
+final class HCDefaultAudioplayersAudioPlayer
+    implements HCAudioplayersAudioPlayer {
+  HCDefaultAudioplayersAudioPlayer(this._player);
 
   final AudioPlayer _player;
 
@@ -243,10 +244,10 @@ final class DefaultAudioplayersAudioPlayer implements AudioplayersAudioPlayer {
   }
 }
 
-final class _LoopingSfxHandle implements AudioLoopHandle {
+final class _LoopingSfxHandle implements HCAudioLoopHandle {
   _LoopingSfxHandle(this._player, {required this.onStop});
 
-  final AudioplayersAudioPlayer _player;
+  final HCAudioplayersAudioPlayer _player;
   final FutureOr<void> Function() onStop;
   Future<void>? _stop;
   bool _stopped = false;

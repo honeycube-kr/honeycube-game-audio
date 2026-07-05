@@ -1,1 +1,1 @@
-enum AudioBus { master, bgm, sfx }
+enum HCAudioBus { master, bgm, sfx }

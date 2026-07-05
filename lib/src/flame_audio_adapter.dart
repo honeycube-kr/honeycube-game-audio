@@ -1,9 +1,9 @@
 import 'package:honeycube_game_audio/src/audio_service.dart';
 
-final class FlameAudioAdapter {
-  const FlameAudioAdapter(this.audio);
+final class HCFlameAudioAdapter {
+  const HCFlameAudioAdapter(this.audio);
 
-  final AudioService audio;
+  final HCAudioService audio;
 
   Future<void> onLoad() => audio.preloadAll();
 

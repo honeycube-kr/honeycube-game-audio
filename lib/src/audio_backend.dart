@@ -1,14 +1,14 @@
 import 'package:honeycube_game_audio/src/audio_cue.dart';
 
-abstract interface class AudioLoopHandle {
+abstract interface class HCAudioLoopHandle {
   Future<void> stop();
 }
 
-abstract interface class AudioBackend {
-  Future<void> preload(AudioCue cue);
+abstract interface class HCAudioBackend {
+  Future<void> preload(HCAudioCue cue);
 
   Future<void> playBgm(
-    AudioCue cue, {
+    HCAudioCue cue, {
     required double volume,
     required bool loop,
   });
@@ -17,10 +17,10 @@ abstract interface class AudioBackend {
 
   Future<void> setBgmVolume(double volume);
 
-  Future<void> playSfx(AudioCue cue, {required double volume});
+  Future<void> playSfx(HCAudioCue cue, {required double volume});
 
-  Future<AudioLoopHandle> playLoopingSfx(
-    AudioCue cue, {
+  Future<HCAudioLoopHandle> playLoopingSfx(
+    HCAudioCue cue, {
     required double volume,
   });
 

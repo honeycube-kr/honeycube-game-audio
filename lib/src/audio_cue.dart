@@ -1,5 +1,5 @@
-final class AudioCue {
-  const AudioCue.asset(
+final class HCAudioCue {
+  const HCAudioCue.asset(
     this.assetPath, {
     this.volume = 1,
     this.cooldown = Duration.zero,
@@ -9,7 +9,7 @@ final class AudioCue {
        assert(volume >= 0 && volume <= 1),
        assert(maxInstances == null || maxInstances > 0);
 
-  AudioCue.assets(
+  HCAudioCue.assets(
     List<String> assetPaths, {
     this.volume = 1,
     this.cooldown = Duration.zero,
@@ -21,7 +21,7 @@ final class AudioCue {
        assert(volume >= 0 && volume <= 1),
        assert(maxInstances == null || maxInstances > 0);
 
-  const AudioCue._selected(
+  const HCAudioCue._selected(
     this.assetPath, {
     required this.volume,
     required this.cooldown,
@@ -37,8 +37,8 @@ final class AudioCue {
   List<String> get assetPaths =>
       _assetPaths.isEmpty ? <String>[assetPath] : _assetPaths;
 
-  AudioCue selectedAsset(String assetPath) {
-    return AudioCue._selected(
+  HCAudioCue selectedAsset(String assetPath) {
+    return HCAudioCue._selected(
       assetPath,
       volume: volume,
       cooldown: cooldown,

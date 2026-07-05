@@ -6,10 +6,10 @@ import 'package:honeycube_game_audio/honeycube_game_audio.dart';
 
 void main() {
   test(
-    'AudioplayersAudioBackend restarts looping SFX when playback completes',
+    'HCAudioplayersAudioBackend restarts looping SFX when playback completes',
     () async {
       final players = <_FakeAudioPlayer>[];
-      final backend = AudioplayersAudioBackend(
+      final backend = HCAudioplayersAudioBackend(
         playerFactory: () {
           final player = _FakeAudioPlayer();
           players.add(player);
@@ -18,7 +18,7 @@ void main() {
       );
 
       final handle = await backend.playLoopingSfx(
-        AudioCue.asset('assets/sounds/oncha_footstep.wav'),
+        HCAudioCue.asset('assets/sounds/oncha_footstep.wav'),
         volume: 0.5,
       );
 
@@ -43,7 +43,7 @@ void main() {
   );
 }
 
-final class _FakeAudioPlayer implements AudioplayersAudioPlayer {
+final class _FakeAudioPlayer implements HCAudioplayersAudioPlayer {
   final releaseModes = <ReleaseMode>[];
   final seekPositions = <Duration>[];
   final _completeController = StreamController<void>.broadcast();

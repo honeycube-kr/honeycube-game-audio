@@ -5,8 +5,8 @@ import 'package:honeycube_game_audio/src/audio_bus.dart';
 import 'package:honeycube_game_audio/src/audio_catalog.dart';
 import 'package:honeycube_game_audio/src/audio_cue.dart';
 
-final class AudioService {
-  AudioService({
+final class HCAudioService {
+  HCAudioService({
     required this.backend,
     required this.catalog,
     this.maxConcurrentSfx,
@@ -22,8 +22,8 @@ final class AudioService {
     _sfxVolume = sfxVolume;
   }
 
-  final AudioBackend backend;
-  final AudioCatalog catalog;
+  final HCAudioBackend backend;
+  final HCAudioCatalog catalog;
   final int? maxConcurrentSfx;
 
   double _masterVolume = 1;
@@ -35,7 +35,7 @@ final class AudioService {
   bool _hasActiveBgm = false;
   bool _disposed = false;
   double _activeBgmVolume = 0;
-  AudioCue? _activeBgmCue;
+  HCAudioCue? _activeBgmCue;
   double _bgmFadeProgress = 1;
   bool _isBgmFadeInActive = false;
   int _fadeGeneration = 0;
@@ -99,7 +99,7 @@ final class AudioService {
         }
 
         startedVolume = fadeIn == Duration.zero
-            ? _effectiveVolume(AudioBus.bgm, cue)
+            ? _effectiveVolume(HCAudioBus.bgm, cue)
             : 0;
         await backend.playBgm(cue, volume: startedVolume, loop: loop);
       });
@@ -180,7 +180,7 @@ final class AudioService {
       await _playSfxAndRelease(
         id,
         selectedCue,
-        _effectiveVolume(AudioBus.sfx, selectedCue),
+        _effectiveVolume(HCAudioBus.sfx, selectedCue),
       );
       return true;
     } catch (_) {
@@ -203,13 +203,13 @@ final class AudioService {
       _playSfxAndRelease(
         id,
         selectedCue,
-        _effectiveVolume(AudioBus.sfx, selectedCue),
+        _effectiveVolume(HCAudioBus.sfx, selectedCue),
       ).catchError((Object _) {}),
     );
     return true;
   }
 
-  Future<AudioLoopHandle?> playLoopingSfx(String id) async {
+  Future<HCAudioLoopHandle?> playLoopingSfx(String id) async {
     if (_disposed) {
       return null;
     }
@@ -223,7 +223,7 @@ final class AudioService {
     try {
       final handle = await backend.playLoopingSfx(
         selectedCue,
-        volume: _effectiveVolume(AudioBus.sfx, selectedCue),
+        volume: _effectiveVolume(HCAudioBus.sfx, selectedCue),
       );
       return _TrackedAudioLoopHandle(handle, () => _releaseSfxInstance(id));
     } catch (_) {
@@ -275,46 +275,46 @@ final class AudioService {
     await _queueBgmOperation(backend.dispose);
   }
 
-  void setBusVolume(AudioBus bus, double volume) {
+  void setBusVolume(HCAudioBus bus, double volume) {
     _checkVolume(volume);
 
     switch (bus) {
-      case AudioBus.master:
+      case HCAudioBus.master:
         _masterVolume = volume;
-      case AudioBus.bgm:
+      case HCAudioBus.bgm:
         _bgmVolume = volume;
-      case AudioBus.sfx:
+      case HCAudioBus.sfx:
         _sfxVolume = volume;
     }
-    if (bus == AudioBus.master || bus == AudioBus.bgm) {
+    if (bus == HCAudioBus.master || bus == HCAudioBus.bgm) {
       _requestActiveBgmVolumeSync();
     }
   }
 
-  void setMuted(bool muted, {AudioBus bus = AudioBus.master}) {
+  void setMuted(bool muted, {HCAudioBus bus = HCAudioBus.master}) {
     switch (bus) {
-      case AudioBus.master:
+      case HCAudioBus.master:
         _masterMuted = muted;
-      case AudioBus.bgm:
+      case HCAudioBus.bgm:
         _bgmMuted = muted;
-      case AudioBus.sfx:
+      case HCAudioBus.sfx:
         _sfxMuted = muted;
     }
-    if (bus == AudioBus.master || bus == AudioBus.bgm) {
+    if (bus == HCAudioBus.master || bus == HCAudioBus.bgm) {
       _requestActiveBgmVolumeSync();
     }
   }
 
-  double _effectiveVolume(AudioBus bus, AudioCue cue) {
+  double _effectiveVolume(HCAudioBus bus, HCAudioCue cue) {
     final busVolume = switch (bus) {
-      AudioBus.master => 1.0,
-      AudioBus.bgm => _bgmVolume,
-      AudioBus.sfx => _sfxVolume,
+      HCAudioBus.master => 1.0,
+      HCAudioBus.bgm => _bgmVolume,
+      HCAudioBus.sfx => _sfxVolume,
     };
     final busMuted = switch (bus) {
-      AudioBus.master => false,
-      AudioBus.bgm => _bgmMuted,
-      AudioBus.sfx => _sfxMuted,
+      HCAudioBus.master => false,
+      HCAudioBus.bgm => _bgmMuted,
+      HCAudioBus.sfx => _sfxMuted,
     };
 
     if (_masterMuted || busMuted) {
@@ -324,7 +324,7 @@ final class AudioService {
     return _masterVolume * busVolume * cue.volume;
   }
 
-  AudioCue _reserveSfx(String id, AudioCue cue) {
+  HCAudioCue _reserveSfx(String id, HCAudioCue cue) {
     final selectedCue = _selectSfxCue(id, cue);
     _lastSfxPlayAt[id] = DateTime.now();
     _activeSfxInstances[id] = (_activeSfxInstances[id] ?? 0) + 1;
@@ -332,7 +332,7 @@ final class AudioService {
     return selectedCue;
   }
 
-  AudioCue _selectSfxCue(String id, AudioCue cue) {
+  HCAudioCue _selectSfxCue(String id, HCAudioCue cue) {
     final assetPaths = cue.assetPaths;
     if (assetPaths.length == 1) {
       return cue;
@@ -349,7 +349,7 @@ final class AudioService {
     return cue.selectedAsset(selectedPath);
   }
 
-  bool _canPlaySfx(String id, AudioCue cue) {
+  bool _canPlaySfx(String id, HCAudioCue cue) {
     final maxConcurrentSfx = this.maxConcurrentSfx;
     if (maxConcurrentSfx != null && _activeSfxCount >= maxConcurrentSfx) {
       return false;
@@ -368,7 +368,7 @@ final class AudioService {
 
   Future<void> _playSfxAndRelease(
     String id,
-    AudioCue cue,
+    HCAudioCue cue,
     double effectiveVolume,
   ) async {
     try {
@@ -488,7 +488,7 @@ final class AudioService {
       return _activeBgmVolume;
     }
 
-    return _effectiveVolume(AudioBus.bgm, cue);
+    return _effectiveVolume(HCAudioBus.bgm, cue);
   }
 
   bool _isCurrentFade(int generation) {
@@ -523,10 +523,10 @@ final class AudioService {
   }
 }
 
-final class _TrackedAudioLoopHandle implements AudioLoopHandle {
+final class _TrackedAudioLoopHandle implements HCAudioLoopHandle {
   _TrackedAudioLoopHandle(this._inner, this._onStop);
 
-  final AudioLoopHandle _inner;
+  final HCAudioLoopHandle _inner;
   final void Function() _onStop;
   bool _stopped = false;
 

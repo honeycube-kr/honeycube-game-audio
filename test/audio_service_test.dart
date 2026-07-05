@@ -9,10 +9,10 @@ void main() {
   test(
     'core catalog and backend contract are usable without playback policy',
     () async {
-      final catalog = AudioCatalog(
-        bgm: {'gameplay': AudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
+      final catalog = HCAudioCatalog(
+        bgm: {'gameplay': HCAudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
         sfx: {
-          'ui_button': AudioCue.asset(
+          'ui_button': HCAudioCue.asset(
             'assets/sounds/ui_button.wav',
             cooldown: Duration(milliseconds: 120),
             maxInstances: 2,
@@ -21,7 +21,11 @@ void main() {
       );
       final backend = _FakeAudioBackend();
 
-      expect(AudioBus.values, [AudioBus.master, AudioBus.bgm, AudioBus.sfx]);
+      expect(HCAudioBus.values, [
+        HCAudioBus.master,
+        HCAudioBus.bgm,
+        HCAudioBus.sfx,
+      ]);
       expect(
         catalog.bgmCue('gameplay')?.assetPath,
         'assets/sounds/gameplay_bgm.mp3',
@@ -65,8 +69,8 @@ void main() {
     },
   );
 
-  test('AudioCue supports variation assets', () {
-    final cue = AudioCue.assets([
+  test('HCAudioCue supports variation assets', () {
+    final cue = HCAudioCue.assets([
       'assets/sounds/ui_button_1.wav',
       'assets/sounds/ui_button_2.wav',
     ], volume: 0.7);
@@ -80,22 +84,22 @@ void main() {
   });
 
   test(
-    'AudioService plays one active BGM and stops it before replacing',
+    'HCAudioService plays one active BGM and stops it before replacing',
     () async {
-      final catalog = AudioCatalog(
+      final catalog = HCAudioCatalog(
         bgm: {
-          'gameplay': AudioCue.asset(
+          'gameplay': HCAudioCue.asset(
             'assets/sounds/gameplay_bgm.mp3',
             volume: 0.8,
           ),
-          'menu': AudioCue.asset('assets/sounds/menu_bgm.mp3'),
+          'menu': HCAudioCue.asset('assets/sounds/menu_bgm.mp3'),
         },
       );
       final backend = _FakeAudioBackend();
-      final audio = AudioService(backend: backend, catalog: catalog);
+      final audio = HCAudioService(backend: backend, catalog: catalog);
 
-      audio.setBusVolume(AudioBus.master, 0.5);
-      audio.setBusVolume(AudioBus.bgm, 0.5);
+      audio.setBusVolume(HCAudioBus.master, 0.5);
+      audio.setBusVolume(HCAudioBus.bgm, 0.5);
 
       expect(await audio.playBgm('gameplay'), isTrue);
       expect(await audio.playBgm('menu', loop: false), isTrue);
@@ -108,20 +112,23 @@ void main() {
     },
   );
 
-  test('AudioService uses configured member volumes for playback', () async {
-    final catalog = AudioCatalog(
+  test('HCAudioService uses configured member volumes for playback', () async {
+    final catalog = HCAudioCatalog(
       bgm: {
-        'gameplay': AudioCue.asset(
+        'gameplay': HCAudioCue.asset(
           'assets/sounds/gameplay_bgm.mp3',
           volume: 0.8,
         ),
       },
       sfx: {
-        'ui_button': AudioCue.asset('assets/sounds/ui_button.wav', volume: 0.6),
+        'ui_button': HCAudioCue.asset(
+          'assets/sounds/ui_button.wav',
+          volume: 0.6,
+        ),
       },
     );
     final backend = _FakeAudioBackend();
-    final audio = AudioService(
+    final audio = HCAudioService(
       backend: backend,
       catalog: catalog,
       masterVolume: 0.5,
@@ -138,28 +145,28 @@ void main() {
     ]);
   });
 
-  test('AudioService does not call backend for missing BGM cue', () async {
-    final audio = AudioService(
+  test('HCAudioService does not call backend for missing BGM cue', () async {
+    final audio = HCAudioService(
       backend: _FakeAudioBackend(),
-      catalog: AudioCatalog(),
+      catalog: HCAudioCatalog(),
     );
 
     expect(await audio.playBgm('missing'), isFalse);
   });
 
-  test('AudioService applies master and bgm mute to BGM volume', () async {
-    final catalog = AudioCatalog(
-      bgm: {'gameplay': AudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
+  test('HCAudioService applies master and bgm mute to BGM volume', () async {
+    final catalog = HCAudioCatalog(
+      bgm: {'gameplay': HCAudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
     );
     final backend = _FakeAudioBackend();
-    final audio = AudioService(backend: backend, catalog: catalog);
+    final audio = HCAudioService(backend: backend, catalog: catalog);
 
     audio.setMuted(true);
     expect(await audio.playBgm('gameplay'), isTrue);
     await audio.stopBgm();
 
     audio.setMuted(false);
-    audio.setMuted(true, bus: AudioBus.bgm);
+    audio.setMuted(true, bus: HCAudioBus.bgm);
     expect(await audio.playBgm('gameplay'), isTrue);
 
     expect(backend.calls, [
@@ -169,19 +176,19 @@ void main() {
     ]);
   });
 
-  test('AudioService fades BGM in from zero to target volume', () async {
-    final catalog = AudioCatalog(
+  test('HCAudioService fades BGM in from zero to target volume', () async {
+    final catalog = HCAudioCatalog(
       bgm: {
-        'gameplay': AudioCue.asset(
+        'gameplay': HCAudioCue.asset(
           'assets/sounds/gameplay_bgm.mp3',
           volume: 0.8,
         ),
       },
     );
     final backend = _FakeAudioBackend();
-    final audio = AudioService(backend: backend, catalog: catalog);
+    final audio = HCAudioService(backend: backend, catalog: catalog);
 
-    audio.setBusVolume(AudioBus.master, 0.5);
+    audio.setBusVolume(HCAudioBus.master, 0.5);
 
     expect(
       await audio.playBgm('gameplay', fadeIn: Duration(milliseconds: 1)),
@@ -195,12 +202,12 @@ void main() {
     expect(backend.calls.last, 'setBgmVolume:0.4');
   });
 
-  test('AudioService fades BGM out before stopping', () async {
-    final catalog = AudioCatalog(
-      bgm: {'gameplay': AudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
+  test('HCAudioService fades BGM out before stopping', () async {
+    final catalog = HCAudioCatalog(
+      bgm: {'gameplay': HCAudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
     );
     final backend = _FakeAudioBackend();
-    final audio = AudioService(backend: backend, catalog: catalog);
+    final audio = HCAudioService(backend: backend, catalog: catalog);
 
     expect(await audio.playBgm('gameplay'), isTrue);
     await audio.stopBgm(fadeOut: Duration(milliseconds: 1));
@@ -210,13 +217,13 @@ void main() {
   });
 
   test(
-    'AudioService stops late BGM play when stop arrives while backend awaits',
+    'HCAudioService stops late BGM play when stop arrives while backend awaits',
     () async {
-      final catalog = AudioCatalog(
-        bgm: {'gameplay': AudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
+      final catalog = HCAudioCatalog(
+        bgm: {'gameplay': HCAudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
       );
       final backend = _FakeAudioBackend()..holdPlayBgm();
-      final audio = AudioService(backend: backend, catalog: catalog);
+      final audio = HCAudioService(backend: backend, catalog: catalog);
 
       final play = audio.playBgm('gameplay', fadeIn: Duration(milliseconds: 1));
       await Future<void>.delayed(Duration.zero);
@@ -236,13 +243,13 @@ void main() {
   );
 
   test(
-    'AudioService disposes after late BGM play when dispose arrives while backend awaits',
+    'HCAudioService disposes after late BGM play when dispose arrives while backend awaits',
     () async {
-      final catalog = AudioCatalog(
-        bgm: {'gameplay': AudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
+      final catalog = HCAudioCatalog(
+        bgm: {'gameplay': HCAudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
       );
       final backend = _FakeAudioBackend()..holdPlayBgm();
-      final audio = AudioService(backend: backend, catalog: catalog);
+      final audio = HCAudioService(backend: backend, catalog: catalog);
 
       final play = audio.playBgm('gameplay');
       await Future<void>.delayed(Duration.zero);
@@ -262,15 +269,15 @@ void main() {
     },
   );
 
-  test('AudioService plays latest BGM after queued stop completes', () async {
-    final catalog = AudioCatalog(
+  test('HCAudioService plays latest BGM after queued stop completes', () async {
+    final catalog = HCAudioCatalog(
       bgm: {
-        'gameplay': AudioCue.asset('assets/sounds/gameplay_bgm.mp3'),
-        'menu': AudioCue.asset('assets/sounds/menu_bgm.mp3'),
+        'gameplay': HCAudioCue.asset('assets/sounds/gameplay_bgm.mp3'),
+        'menu': HCAudioCue.asset('assets/sounds/menu_bgm.mp3'),
       },
     );
     final backend = _FakeAudioBackend();
-    final audio = AudioService(backend: backend, catalog: catalog);
+    final audio = HCAudioService(backend: backend, catalog: catalog);
 
     expect(await audio.playBgm('gameplay'), isTrue);
 
@@ -292,17 +299,17 @@ void main() {
     expect(backend.currentBgmAssetPath, 'assets/sounds/menu_bgm.mp3');
   });
 
-  test('AudioService missing BGM cue does not cancel active fade', () async {
-    final catalog = AudioCatalog(
+  test('HCAudioService missing BGM cue does not cancel active fade', () async {
+    final catalog = HCAudioCatalog(
       bgm: {
-        'gameplay': AudioCue.asset(
+        'gameplay': HCAudioCue.asset(
           'assets/sounds/gameplay_bgm.mp3',
           volume: 0.8,
         ),
       },
     );
     final backend = _FakeAudioBackend();
-    final audio = AudioService(backend: backend, catalog: catalog);
+    final audio = HCAudioService(backend: backend, catalog: catalog);
 
     final fade = audio.playBgm('gameplay', fadeIn: Duration(milliseconds: 20));
     await Future<void>.delayed(Duration.zero);
@@ -314,24 +321,24 @@ void main() {
   });
 
   test(
-    'AudioService updates active BGM volume from bus changes only',
+    'HCAudioService updates active BGM volume from bus changes only',
     () async {
-      final catalog = AudioCatalog(
+      final catalog = HCAudioCatalog(
         bgm: {
-          'gameplay': AudioCue.asset(
+          'gameplay': HCAudioCue.asset(
             'assets/sounds/gameplay_bgm.mp3',
             volume: 0.8,
           ),
         },
       );
       final backend = _FakeAudioBackend();
-      final audio = AudioService(backend: backend, catalog: catalog);
+      final audio = HCAudioService(backend: backend, catalog: catalog);
 
       expect(await audio.playBgm('gameplay'), isTrue);
 
-      audio.setBusVolume(AudioBus.bgm, 0.5);
-      audio.setBusVolume(AudioBus.sfx, 0.1);
-      audio.setMuted(true, bus: AudioBus.bgm);
+      audio.setBusVolume(HCAudioBus.bgm, 0.5);
+      audio.setBusVolume(HCAudioBus.sfx, 0.1);
+      audio.setMuted(true, bus: HCAudioBus.bgm);
       await Future<void>.delayed(Duration.zero);
 
       expect(backend.calls, [
@@ -341,24 +348,24 @@ void main() {
     },
   );
 
-  test('AudioService applies latest queued BGM volume sync last', () async {
-    final catalog = AudioCatalog(
+  test('HCAudioService applies latest queued BGM volume sync last', () async {
+    final catalog = HCAudioCatalog(
       bgm: {
-        'gameplay': AudioCue.asset(
+        'gameplay': HCAudioCue.asset(
           'assets/sounds/gameplay_bgm.mp3',
           volume: 0.8,
         ),
       },
     );
     final backend = _FakeAudioBackend();
-    final audio = AudioService(backend: backend, catalog: catalog);
+    final audio = HCAudioService(backend: backend, catalog: catalog);
 
     expect(await audio.playBgm('gameplay'), isTrue);
 
     backend.holdBgmVolumeSets(2);
-    audio.setBusVolume(AudioBus.bgm, 0.5);
+    audio.setBusVolume(HCAudioBus.bgm, 0.5);
     await backend.waitForBgmVolumeSetAttempt(1);
-    audio.setMuted(true, bus: AudioBus.bgm);
+    audio.setMuted(true, bus: HCAudioBus.bgm);
 
     backend.releaseBgmVolumeSet(0);
     await backend.waitForBgmVolumeSetAttempt(2);
@@ -368,48 +375,54 @@ void main() {
     expect(backend.bgmVolumes.last, 0.0);
   });
 
-  test('AudioService fade-in ends at BGM volume changed during fade', () async {
-    final catalog = AudioCatalog(
+  test(
+    'HCAudioService fade-in ends at BGM volume changed during fade',
+    () async {
+      final catalog = HCAudioCatalog(
+        bgm: {
+          'gameplay': HCAudioCue.asset(
+            'assets/sounds/gameplay_bgm.mp3',
+            volume: 0.8,
+          ),
+        },
+      );
+      final backend = _FakeAudioBackend();
+      final audio = HCAudioService(backend: backend, catalog: catalog);
+
+      final fade = audio.playBgm(
+        'gameplay',
+        fadeIn: Duration(milliseconds: 20),
+      );
+      await _waitForSetBgmVolume(backend);
+
+      audio.setBusVolume(HCAudioBus.bgm, 0.5);
+      final changedAt = backend.bgmVolumes.length - 1;
+      expect(await fade, isTrue);
+
+      expect(backend.calls.last, 'setBgmVolume:0.4');
+      expect(
+        backend.bgmVolumes.skip(changedAt),
+        everyElement(lessThanOrEqualTo(0.401)),
+      );
+    },
+  );
+
+  test('HCAudioService syncs fade-in BGM volume at current progress', () async {
+    final catalog = HCAudioCatalog(
       bgm: {
-        'gameplay': AudioCue.asset(
+        'gameplay': HCAudioCue.asset(
           'assets/sounds/gameplay_bgm.mp3',
           volume: 0.8,
         ),
       },
     );
     final backend = _FakeAudioBackend();
-    final audio = AudioService(backend: backend, catalog: catalog);
+    final audio = HCAudioService(backend: backend, catalog: catalog);
 
     final fade = audio.playBgm('gameplay', fadeIn: Duration(milliseconds: 20));
     await _waitForSetBgmVolume(backend);
 
-    audio.setBusVolume(AudioBus.bgm, 0.5);
-    final changedAt = backend.bgmVolumes.length - 1;
-    expect(await fade, isTrue);
-
-    expect(backend.calls.last, 'setBgmVolume:0.4');
-    expect(
-      backend.bgmVolumes.skip(changedAt),
-      everyElement(lessThanOrEqualTo(0.401)),
-    );
-  });
-
-  test('AudioService syncs fade-in BGM volume at current progress', () async {
-    final catalog = AudioCatalog(
-      bgm: {
-        'gameplay': AudioCue.asset(
-          'assets/sounds/gameplay_bgm.mp3',
-          volume: 0.8,
-        ),
-      },
-    );
-    final backend = _FakeAudioBackend();
-    final audio = AudioService(backend: backend, catalog: catalog);
-
-    final fade = audio.playBgm('gameplay', fadeIn: Duration(milliseconds: 20));
-    await _waitForSetBgmVolume(backend);
-
-    audio.setBusVolume(AudioBus.bgm, 0.5);
+    audio.setBusVolume(HCAudioBus.bgm, 0.5);
     await Future<void>.delayed(Duration.zero);
 
     expect(backend.bgmVolumes.last, lessThanOrEqualTo(0.4));
@@ -417,45 +430,51 @@ void main() {
     expect(backend.bgmVolumes.last, closeTo(0.4, 0.001));
   });
 
-  test('AudioService fade-in stays muted after BGM mute during fade', () async {
-    final catalog = AudioCatalog(
-      bgm: {
-        'gameplay': AudioCue.asset(
-          'assets/sounds/gameplay_bgm.mp3',
-          volume: 0.8,
-        ),
-      },
-    );
-    final backend = _FakeAudioBackend();
-    final audio = AudioService(backend: backend, catalog: catalog);
+  test(
+    'HCAudioService fade-in stays muted after BGM mute during fade',
+    () async {
+      final catalog = HCAudioCatalog(
+        bgm: {
+          'gameplay': HCAudioCue.asset(
+            'assets/sounds/gameplay_bgm.mp3',
+            volume: 0.8,
+          ),
+        },
+      );
+      final backend = _FakeAudioBackend();
+      final audio = HCAudioService(backend: backend, catalog: catalog);
 
-    final fade = audio.playBgm('gameplay', fadeIn: Duration(milliseconds: 20));
-    await _waitForSetBgmVolume(backend);
+      final fade = audio.playBgm(
+        'gameplay',
+        fadeIn: Duration(milliseconds: 20),
+      );
+      await _waitForSetBgmVolume(backend);
 
-    final mutedAt = backend.bgmVolumes.length;
-    audio.setMuted(true, bus: AudioBus.bgm);
-    expect(await fade, isTrue);
+      final mutedAt = backend.bgmVolumes.length;
+      audio.setMuted(true, bus: HCAudioBus.bgm);
+      expect(await fade, isTrue);
 
-    expect(backend.calls.last, 'setBgmVolume:0.0');
-    expect(backend.bgmVolumes.skip(mutedAt), everyElement(closeTo(0, 0.001)));
-  });
+      expect(backend.calls.last, 'setBgmVolume:0.0');
+      expect(backend.bgmVolumes.skip(mutedAt), everyElement(closeTo(0, 0.001)));
+    },
+  );
 
   test(
-    'AudioService overlaps same SFX cue when no cooldown or max instances',
+    'HCAudioService overlaps same SFX cue when no cooldown or max instances',
     () async {
-      final catalog = AudioCatalog(
+      final catalog = HCAudioCatalog(
         sfx: {
-          'ui_button': AudioCue.asset(
+          'ui_button': HCAudioCue.asset(
             'assets/sounds/ui_button.wav',
             volume: 0.8,
           ),
         },
       );
       final backend = _FakeAudioBackend();
-      final audio = AudioService(backend: backend, catalog: catalog);
+      final audio = HCAudioService(backend: backend, catalog: catalog);
 
-      audio.setBusVolume(AudioBus.master, 0.5);
-      audio.setBusVolume(AudioBus.sfx, 0.5);
+      audio.setBusVolume(HCAudioBus.master, 0.5);
+      audio.setBusVolume(HCAudioBus.sfx, 0.5);
 
       backend.holdSfx('assets/sounds/ui_button.wav');
       final first = audio.playSfx('ui_button');
@@ -476,18 +495,18 @@ void main() {
     },
   );
 
-  test('AudioService applies master and sfx mute to SFX volume', () async {
-    final catalog = AudioCatalog(
-      sfx: {'ui_button': AudioCue.asset('assets/sounds/ui_button.wav')},
+  test('HCAudioService applies master and sfx mute to SFX volume', () async {
+    final catalog = HCAudioCatalog(
+      sfx: {'ui_button': HCAudioCue.asset('assets/sounds/ui_button.wav')},
     );
     final backend = _FakeAudioBackend();
-    final audio = AudioService(backend: backend, catalog: catalog);
+    final audio = HCAudioService(backend: backend, catalog: catalog);
 
     audio.setMuted(true);
     expect(await audio.playSfx('ui_button'), isTrue);
 
     audio.setMuted(false);
-    audio.setMuted(true, bus: AudioBus.sfx);
+    audio.setMuted(true, bus: HCAudioBus.sfx);
     expect(await audio.playSfx('ui_button'), isTrue);
 
     expect(backend.calls, [
@@ -496,17 +515,17 @@ void main() {
     ]);
   });
 
-  test('AudioService starts SFX without waiting for completion', () async {
-    final catalog = AudioCatalog(
+  test('HCAudioService starts SFX without waiting for completion', () async {
+    final catalog = HCAudioCatalog(
       sfx: {
-        'ui_button': AudioCue.asset(
+        'ui_button': HCAudioCue.asset(
           'assets/sounds/ui_button.wav',
           maxInstances: 1,
         ),
       },
     );
     final backend = _FakeAudioBackend();
-    final audio = AudioService(backend: backend, catalog: catalog);
+    final audio = HCAudioService(backend: backend, catalog: catalog);
 
     backend.holdSfx('assets/sounds/ui_button.wav');
 
@@ -524,17 +543,17 @@ void main() {
     ]);
   });
 
-  test('AudioService avoids immediate variation repeats', () async {
-    final catalog = AudioCatalog(
+  test('HCAudioService avoids immediate variation repeats', () async {
+    final catalog = HCAudioCatalog(
       sfx: {
-        'ui_button': AudioCue.assets([
+        'ui_button': HCAudioCue.assets([
           'assets/sounds/ui_button_1.wav',
           'assets/sounds/ui_button_2.wav',
         ]),
       },
     );
     final backend = _FakeAudioBackend();
-    final audio = AudioService(backend: backend, catalog: catalog);
+    final audio = HCAudioService(backend: backend, catalog: catalog);
 
     expect(await audio.playSfx('ui_button'), isTrue);
     expect(await audio.playSfx('ui_button'), isTrue);
@@ -543,21 +562,21 @@ void main() {
     expect(backend.calls[0], isNot(equals(backend.calls[1])));
   });
 
-  test('AudioService limits SFX replay per cue by cooldown', () async {
-    final catalog = AudioCatalog(
+  test('HCAudioService limits SFX replay per cue by cooldown', () async {
+    final catalog = HCAudioCatalog(
       sfx: {
-        'ui_button': AudioCue.asset(
+        'ui_button': HCAudioCue.asset(
           'assets/sounds/ui_button.wav',
           cooldown: Duration(minutes: 1),
         ),
-        'footstep': AudioCue.asset(
+        'footstep': HCAudioCue.asset(
           'assets/sounds/oncha_footstep.wav',
           cooldown: Duration(minutes: 1),
         ),
       },
     );
     final backend = _FakeAudioBackend();
-    final audio = AudioService(backend: backend, catalog: catalog);
+    final audio = HCAudioService(backend: backend, catalog: catalog);
 
     expect(await audio.playSfx('ui_button'), isTrue);
     expect(await audio.playSfx('ui_button'), isFalse);
@@ -569,36 +588,36 @@ void main() {
     ]);
   });
 
-  test('AudioService requires positive global SFX limit', () {
+  test('HCAudioService requires positive global SFX limit', () {
     final backend = _FakeAudioBackend();
 
     expect(
-      () => AudioService(
+      () => HCAudioService(
         backend: backend,
-        catalog: AudioCatalog(),
+        catalog: HCAudioCatalog(),
         maxConcurrentSfx: 0,
       ),
       throwsA(isA<AssertionError>()),
     );
     expect(
-      AudioService(
+      HCAudioService(
         backend: backend,
-        catalog: AudioCatalog(),
+        catalog: HCAudioCatalog(),
         maxConcurrentSfx: 1,
       ),
-      isA<AudioService>(),
+      isA<HCAudioService>(),
     );
   });
 
-  test('AudioService drops SFX above the global active limit', () async {
-    final catalog = AudioCatalog(
+  test('HCAudioService drops SFX above the global active limit', () async {
+    final catalog = HCAudioCatalog(
       sfx: {
-        'ui_button': AudioCue.asset('assets/sounds/ui_button.wav'),
-        'footstep': AudioCue.asset('assets/sounds/oncha_footstep.wav'),
+        'ui_button': HCAudioCue.asset('assets/sounds/ui_button.wav'),
+        'footstep': HCAudioCue.asset('assets/sounds/oncha_footstep.wav'),
       },
     );
     final backend = _FakeAudioBackend();
-    final audio = AudioService(
+    final audio = HCAudioService(
       backend: backend,
       catalog: catalog,
       maxConcurrentSfx: 1,
@@ -618,21 +637,21 @@ void main() {
       'playSfx:assets/sounds/oncha_footstep.wav:1.0',
     ]);
   });
-  test('AudioService limits SFX overlap per cue by max instances', () async {
-    final catalog = AudioCatalog(
+  test('HCAudioService limits SFX overlap per cue by max instances', () async {
+    final catalog = HCAudioCatalog(
       sfx: {
-        'ui_button': AudioCue.asset(
+        'ui_button': HCAudioCue.asset(
           'assets/sounds/ui_button.wav',
           maxInstances: 1,
         ),
-        'footstep': AudioCue.asset(
+        'footstep': HCAudioCue.asset(
           'assets/sounds/oncha_footstep.wav',
           maxInstances: 1,
         ),
       },
     );
     final backend = _FakeAudioBackend();
-    final audio = AudioService(backend: backend, catalog: catalog);
+    final audio = HCAudioService(backend: backend, catalog: catalog);
 
     backend.holdSfx('assets/sounds/ui_button.wav');
     final first = audio.playSfx('ui_button');
@@ -653,11 +672,11 @@ void main() {
   });
 
   test(
-    'AudioService plays looping SFX until the returned handle stops',
+    'HCAudioService plays looping SFX until the returned handle stops',
     () async {
-      final catalog = AudioCatalog(
+      final catalog = HCAudioCatalog(
         sfx: {
-          'footstep': AudioCue.asset(
+          'footstep': HCAudioCue.asset(
             'assets/sounds/oncha_footstep.wav',
             volume: 0.8,
             maxInstances: 1,
@@ -665,10 +684,10 @@ void main() {
         },
       );
       final backend = _FakeAudioBackend();
-      final audio = AudioService(backend: backend, catalog: catalog);
+      final audio = HCAudioService(backend: backend, catalog: catalog);
 
-      audio.setBusVolume(AudioBus.master, 0.5);
-      audio.setBusVolume(AudioBus.sfx, 0.5);
+      audio.setBusVolume(HCAudioBus.master, 0.5);
+      audio.setBusVolume(HCAudioBus.sfx, 0.5);
 
       final handle = await audio.playLoopingSfx('footstep');
 
@@ -688,17 +707,17 @@ void main() {
     },
   );
 
-  test('AudioService continues preload when one cue fails', () async {
-    final catalog = AudioCatalog(
-      bgm: {'gameplay': AudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
+  test('HCAudioService continues preload when one cue fails', () async {
+    final catalog = HCAudioCatalog(
+      bgm: {'gameplay': HCAudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
       sfx: {
-        'missing': AudioCue.asset('assets/sounds/missing.wav'),
-        'ui_button': AudioCue.asset('assets/sounds/ui_button.wav'),
+        'missing': HCAudioCue.asset('assets/sounds/missing.wav'),
+        'ui_button': HCAudioCue.asset('assets/sounds/ui_button.wav'),
       },
     );
     final backend = _FakeAudioBackend()
       ..failPreload('assets/sounds/missing.wav');
-    final audio = AudioService(backend: backend, catalog: catalog);
+    final audio = HCAudioService(backend: backend, catalog: catalog);
 
     await audio.preloadAll();
 
@@ -709,17 +728,17 @@ void main() {
     ]);
   });
 
-  test('AudioService preloads all variation assets', () async {
-    final catalog = AudioCatalog(
+  test('HCAudioService preloads all variation assets', () async {
+    final catalog = HCAudioCatalog(
       sfx: {
-        'ui_button': AudioCue.assets([
+        'ui_button': HCAudioCue.assets([
           'assets/sounds/ui_button_1.wav',
           'assets/sounds/ui_button_2.wav',
         ]),
       },
     );
     final backend = _FakeAudioBackend();
-    final audio = AudioService(backend: backend, catalog: catalog);
+    final audio = HCAudioService(backend: backend, catalog: catalog);
 
     await audio.preloadAll();
 
@@ -729,17 +748,17 @@ void main() {
     ]);
   });
 
-  test('AudioService returns false when SFX playback fails', () async {
-    final catalog = AudioCatalog(
+  test('HCAudioService returns false when SFX playback fails', () async {
+    final catalog = HCAudioCatalog(
       sfx: {
-        'ui_button': AudioCue.asset(
+        'ui_button': HCAudioCue.asset(
           'assets/sounds/ui_button.wav',
           maxInstances: 1,
         ),
       },
     );
     final backend = _FakeAudioBackend()..failSfx('assets/sounds/ui_button.wav');
-    final audio = AudioService(backend: backend, catalog: catalog);
+    final audio = HCAudioService(backend: backend, catalog: catalog);
 
     expect(await audio.playSfx('ui_button'), isFalse);
 
@@ -752,24 +771,24 @@ void main() {
     ]);
   });
 
-  test('AudioService returns null when looping SFX playback fails', () async {
-    final catalog = AudioCatalog(
-      sfx: {'footstep': AudioCue.asset('assets/sounds/footstep.wav')},
+  test('HCAudioService returns null when looping SFX playback fails', () async {
+    final catalog = HCAudioCatalog(
+      sfx: {'footstep': HCAudioCue.asset('assets/sounds/footstep.wav')},
     );
     final backend = _FakeAudioBackend()
       ..failLoopingSfx('assets/sounds/footstep.wav');
-    final audio = AudioService(backend: backend, catalog: catalog);
+    final audio = HCAudioService(backend: backend, catalog: catalog);
 
     expect(await audio.playLoopingSfx('footstep'), isNull);
   });
 
-  test('AudioService returns false when BGM playback fails', () async {
-    final catalog = AudioCatalog(
-      bgm: {'gameplay': AudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
+  test('HCAudioService returns false when BGM playback fails', () async {
+    final catalog = HCAudioCatalog(
+      bgm: {'gameplay': HCAudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
     );
     final backend = _FakeAudioBackend()
       ..failBgm('assets/sounds/gameplay_bgm.mp3');
-    final audio = AudioService(backend: backend, catalog: catalog);
+    final audio = HCAudioService(backend: backend, catalog: catalog);
 
     expect(await audio.playBgm('gameplay'), isFalse);
 
@@ -778,18 +797,18 @@ void main() {
     expect(await audio.playBgm('gameplay'), isTrue);
   });
   test(
-    'AudioService stops all SFX and clears active instance tracking',
+    'HCAudioService stops all SFX and clears active instance tracking',
     () async {
-      final catalog = AudioCatalog(
+      final catalog = HCAudioCatalog(
         sfx: {
-          'ui_button': AudioCue.asset(
+          'ui_button': HCAudioCue.asset(
             'assets/sounds/ui_button.wav',
             maxInstances: 1,
           ),
         },
       );
       final backend = _FakeAudioBackend();
-      final audio = AudioService(backend: backend, catalog: catalog);
+      final audio = HCAudioService(backend: backend, catalog: catalog);
 
       backend.holdSfx('assets/sounds/ui_button.wav');
       expect(await audio.startSfx('ui_button'), isTrue);
@@ -807,14 +826,14 @@ void main() {
   );
 
   test(
-    'AudioService forwards preload pause resume and dispose to backend',
+    'HCAudioService forwards preload pause resume and dispose to backend',
     () async {
-      final catalog = AudioCatalog(
-        bgm: {'gameplay': AudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
-        sfx: {'ui_button': AudioCue.asset('assets/sounds/ui_button.wav')},
+      final catalog = HCAudioCatalog(
+        bgm: {'gameplay': HCAudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
+        sfx: {'ui_button': HCAudioCue.asset('assets/sounds/ui_button.wav')},
       );
       final backend = _FakeAudioBackend();
-      final audio = AudioService(backend: backend, catalog: catalog);
+      final audio = HCAudioService(backend: backend, catalog: catalog);
 
       await audio.preloadAll();
       await audio.pauseAll();
@@ -831,13 +850,13 @@ void main() {
     },
   );
 
-  test('AudioService ignores playback after dispose', () async {
-    final catalog = AudioCatalog(
-      bgm: {'gameplay': AudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
-      sfx: {'ui_button': AudioCue.asset('assets/sounds/ui_button.wav')},
+  test('HCAudioService ignores playback after dispose', () async {
+    final catalog = HCAudioCatalog(
+      bgm: {'gameplay': HCAudioCue.asset('assets/sounds/gameplay_bgm.mp3')},
+      sfx: {'ui_button': HCAudioCue.asset('assets/sounds/ui_button.wav')},
     );
     final backend = _FakeAudioBackend();
-    final audio = AudioService(backend: backend, catalog: catalog);
+    final audio = HCAudioService(backend: backend, catalog: catalog);
 
     await audio.dispose();
 
@@ -852,14 +871,14 @@ void main() {
     expect(backend.calls, ['dispose']);
   });
 
-  test('AudioplayersAudioBackend implements AudioBackend contract', () {
-    final backend = AudioplayersAudioBackend();
+  test('HCAudioplayersAudioBackend implements HCAudioBackend contract', () {
+    final backend = HCAudioplayersAudioBackend();
 
-    expect(backend, isA<AudioBackend>());
+    expect(backend, isA<HCAudioBackend>());
   });
 }
 
-final class _FakeAudioBackend implements AudioBackend {
+final class _FakeAudioBackend implements HCAudioBackend {
   final calls = <String>[];
   final bgmVolumes = <double>[];
   final _failedCalls = <String>{};
@@ -890,7 +909,7 @@ final class _FakeAudioBackend implements AudioBackend {
     _failedCalls.add('$operation:$assetPath');
   }
 
-  bool _shouldFail(String operation, AudioCue cue) {
+  bool _shouldFail(String operation, HCAudioCue cue) {
     return _failedCalls.contains('$operation:${cue.assetPath}');
   }
 
@@ -947,7 +966,7 @@ final class _FakeAudioBackend implements AudioBackend {
   }
 
   @override
-  Future<void> preload(AudioCue cue) async {
+  Future<void> preload(HCAudioCue cue) async {
     calls.add('preload:${cue.assetPath}');
     if (_shouldFail('preload', cue)) {
       throw StateError('missing ${cue.assetPath}');
@@ -956,7 +975,7 @@ final class _FakeAudioBackend implements AudioBackend {
 
   @override
   Future<void> playBgm(
-    AudioCue cue, {
+    HCAudioCue cue, {
     required double volume,
     required bool loop,
   }) async {
@@ -982,7 +1001,7 @@ final class _FakeAudioBackend implements AudioBackend {
   }
 
   @override
-  Future<void> playSfx(AudioCue cue, {required double volume}) async {
+  Future<void> playSfx(HCAudioCue cue, {required double volume}) async {
     calls.add('playSfx:${cue.assetPath}:$volume');
     if (_shouldFail('sfx', cue)) {
       throw StateError('missing ${cue.assetPath}');
@@ -998,8 +1017,8 @@ final class _FakeAudioBackend implements AudioBackend {
   }
 
   @override
-  Future<AudioLoopHandle> playLoopingSfx(
-    AudioCue cue, {
+  Future<HCAudioLoopHandle> playLoopingSfx(
+    HCAudioCue cue, {
     required double volume,
   }) async {
     calls.add('playLoopingSfx:${cue.assetPath}:$volume');
@@ -1039,7 +1058,7 @@ final class _FakeAudioBackend implements AudioBackend {
   }
 }
 
-final class _FakeAudioLoopHandle implements AudioLoopHandle {
+final class _FakeAudioLoopHandle implements HCAudioLoopHandle {
   _FakeAudioLoopHandle(this.calls, this.assetPath);
 
   final List<String> calls;
