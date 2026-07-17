@@ -15,6 +15,20 @@ final class HCAudioplayersAudioBackend implements HCAudioBackend {
 
   final AudioCache _cache;
   final HCAudioplayersAudioPlayerFactory _playerFactory;
+  static final AudioContext _bgmAudioContext = AudioContext(
+    android: const AudioContextAndroid(
+      contentType: AndroidContentType.music,
+      usageType: AndroidUsageType.media,
+      audioFocus: AndroidAudioFocus.gain,
+    ),
+  );
+  static final AudioContext _sfxAudioContext = AudioContext(
+    android: const AudioContextAndroid(
+      contentType: AndroidContentType.sonification,
+      usageType: AndroidUsageType.game,
+      audioFocus: AndroidAudioFocus.none,
+    ),
+  );
   HCAudioplayersAudioPlayer? _bgmPlayer;
   final Set<HCAudioplayersAudioPlayer> _sfxPlayers = {};
   final Set<_LoopingSfxHandle> _loopingSfxHandles = {};
@@ -33,6 +47,7 @@ final class HCAudioplayersAudioBackend implements HCAudioBackend {
     required bool loop,
   }) async {
     final bgmPlayer = _bgmPlayerOrCreate();
+    await bgmPlayer.setAudioContext(_bgmAudioContext);
     await bgmPlayer.setReleaseMode(loop ? ReleaseMode.loop : ReleaseMode.stop);
     await bgmPlayer.play(_assetSource(cue), volume: volume);
   }
@@ -54,6 +69,7 @@ final class HCAudioplayersAudioBackend implements HCAudioBackend {
     final sfxStopped = _sfxStopped.future;
 
     try {
+      await player.setAudioContext(_sfxAudioContext);
       await player.setReleaseMode(ReleaseMode.release);
       await player.play(_assetSource(cue), volume: volume);
       await Future.any([
@@ -89,6 +105,7 @@ final class HCAudioplayersAudioBackend implements HCAudioBackend {
     _loopingSfxHandles.add(handle);
 
     try {
+      await player.setAudioContext(_sfxAudioContext);
       await player.setReleaseMode(ReleaseMode.stop);
       await player.play(_assetSource(cue), volume: volume);
       return handle;
@@ -176,6 +193,7 @@ abstract interface class HCAudioplayersAudioPlayer {
   set audioCache(AudioCache cache);
   Stream<void> get onPlayerComplete;
 
+  Future<void> setAudioContext(AudioContext audioContext);
   Future<void> setReleaseMode(ReleaseMode releaseMode);
   Future<void> play(Source source, {double? volume});
   Future<void> stop();
@@ -202,6 +220,11 @@ final class HCDefaultAudioplayersAudioPlayer
 
   @override
   Stream<void> get onPlayerComplete => _player.onPlayerComplete;
+
+  @override
+  Future<void> setAudioContext(AudioContext audioContext) {
+    return _player.setAudioContext(audioContext);
+  }
 
   @override
   Future<void> setReleaseMode(ReleaseMode releaseMode) {
