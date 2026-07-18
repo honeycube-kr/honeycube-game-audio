@@ -4,6 +4,19 @@ abstract interface class HCAudioLoopHandle {
   Future<void> stop();
 }
 
+/// Represents an SFX playback that has already been accepted by the backend.
+abstract interface class HCAudioSfxPlayback {
+  Future<void> get completed;
+}
+
+/// Optional backend capability for callers that must wait until an SFX starts.
+///
+/// Existing [HCAudioBackend] implementations remain compatible through
+/// [HCAudioBackend.playSfx].
+abstract interface class HCAudioSfxStartBackend {
+  Future<HCAudioSfxPlayback> startSfx(HCAudioCue cue, {required double volume});
+}
+
 abstract interface class HCAudioBackend {
   Future<void> preload(HCAudioCue cue);
 

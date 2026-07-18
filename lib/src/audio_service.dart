@@ -177,14 +177,24 @@ final class HCAudioService {
 
     final selectedCue = _reserveSfx(id, cue);
     try {
-      await _playSfxAndRelease(
-        id,
-        selectedCue,
-        _effectiveVolume(HCAudioBus.sfx, selectedCue),
-      );
+      final effectiveVolume = _effectiveVolume(HCAudioBus.sfx, selectedCue);
+      final startBackend = backend is HCAudioSfxStartBackend
+          ? backend as HCAudioSfxStartBackend
+          : null;
+      if (startBackend != null) {
+        final playback = await startBackend.startSfx(
+          selectedCue,
+          volume: effectiveVolume,
+        );
+        await playback.completed;
+      } else {
+        await backend.playSfx(selectedCue, volume: effectiveVolume);
+      }
       return true;
     } catch (_) {
       return false;
+    } finally {
+      _releaseSfxInstance(id);
     }
   }
 
@@ -199,11 +209,34 @@ final class HCAudioService {
     }
 
     final selectedCue = _reserveSfx(id, cue);
+    final effectiveVolume = _effectiveVolume(HCAudioBus.sfx, selectedCue);
+    final startBackend = backend is HCAudioSfxStartBackend
+        ? backend as HCAudioSfxStartBackend
+        : null;
+    if (startBackend != null) {
+      try {
+        final playback = await startBackend.startSfx(
+          selectedCue,
+          volume: effectiveVolume,
+        );
+        unawaited(
+          playback.completed.then<void>(
+            (_) => _releaseSfxInstance(id),
+            onError: (Object _, StackTrace _) => _releaseSfxInstance(id),
+          ),
+        );
+        return true;
+      } catch (_) {
+        _releaseSfxInstance(id);
+        return false;
+      }
+    }
+
     unawaited(
       _playSfxAndRelease(
         id,
         selectedCue,
-        _effectiveVolume(HCAudioBus.sfx, selectedCue),
+        effectiveVolume,
       ).catchError((Object _) {}),
     );
     return true;

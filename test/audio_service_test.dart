@@ -543,6 +543,44 @@ void main() {
     ]);
   });
 
+  test(
+    'HCAudioService startSfx waits for playback start but not completion',
+    () async {
+      final catalog = HCAudioCatalog(
+        sfx: {
+          'ui_button': HCAudioCue.asset(
+            'assets/sounds/ui_button.wav',
+            maxInstances: 1,
+          ),
+        },
+      );
+      final backend = _FakeAudioBackend();
+      final audio = HCAudioService(backend: backend, catalog: catalog);
+
+      backend.holdSfxStart('assets/sounds/ui_button.wav');
+      backend.holdSfx('assets/sounds/ui_button.wav');
+
+      var startFinished = false;
+      final start = audio.startSfx('ui_button').then((value) {
+        startFinished = true;
+        return value;
+      });
+      await Future<void>.delayed(Duration.zero);
+
+      expect(startFinished, isFalse);
+
+      backend.releaseSfxStart();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(startFinished, isTrue);
+      expect(await start, isTrue);
+      expect(await audio.startSfx('ui_button'), isFalse);
+
+      backend.releaseSfx();
+      await backend.waitForHeldSfxComplete();
+    },
+  );
+
   test('HCAudioService avoids immediate variation repeats', () async {
     final catalog = HCAudioCatalog(
       sfx: {
@@ -878,12 +916,14 @@ void main() {
   });
 }
 
-final class _FakeAudioBackend implements HCAudioBackend {
+final class _FakeAudioBackend
+    implements HCAudioBackend, HCAudioSfxStartBackend {
   final calls = <String>[];
   final bgmVolumes = <double>[];
   final _failedCalls = <String>{};
   Completer<void>? _sfxBlocker;
   Completer<void>? _sfxComplete;
+  Completer<void>? _sfxStartBlocker;
   Completer<void>? _playBgmBlocker;
   Completer<void>? _stopBgmBlocker;
   final _bgmVolumeBlockers = <Completer<void>>[];
@@ -917,6 +957,16 @@ final class _FakeAudioBackend implements HCAudioBackend {
     _sfxBlocker = Completer<void>();
     _sfxComplete = Completer<void>();
     _heldSfxAssetPath = assetPath;
+  }
+
+  void holdSfxStart(String assetPath) {
+    _sfxStartBlocker = Completer<void>();
+    _heldSfxAssetPath = assetPath;
+  }
+
+  void releaseSfxStart() {
+    _sfxStartBlocker?.complete();
+    _sfxStartBlocker = null;
   }
 
   void releaseSfx() {
@@ -1002,10 +1052,26 @@ final class _FakeAudioBackend implements HCAudioBackend {
 
   @override
   Future<void> playSfx(HCAudioCue cue, {required double volume}) async {
+    final playback = await startSfx(cue, volume: volume);
+    await playback.completed;
+  }
+
+  @override
+  Future<HCAudioSfxPlayback> startSfx(
+    HCAudioCue cue, {
+    required double volume,
+  }) async {
     calls.add('playSfx:${cue.assetPath}:$volume');
     if (_shouldFail('sfx', cue)) {
       throw StateError('missing ${cue.assetPath}');
     }
+    if (_heldSfxAssetPath == cue.assetPath) {
+      await _sfxStartBlocker?.future;
+    }
+    return _FakeSfxPlayback(_completeSfx(cue));
+  }
+
+  Future<void> _completeSfx(HCAudioCue cue) async {
     try {
       if (_heldSfxAssetPath == cue.assetPath) {
         await _sfxBlocker?.future;
@@ -1056,6 +1122,13 @@ final class _FakeAudioBackend implements HCAudioBackend {
     isDisposed = true;
     currentBgmAssetPath = null;
   }
+}
+
+final class _FakeSfxPlayback implements HCAudioSfxPlayback {
+  const _FakeSfxPlayback(this.completed);
+
+  @override
+  final Future<void> completed;
 }
 
 final class _FakeAudioLoopHandle implements HCAudioLoopHandle {

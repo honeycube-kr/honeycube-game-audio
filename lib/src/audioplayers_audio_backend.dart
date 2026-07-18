@@ -4,7 +4,8 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:honeycube_game_audio/src/audio_backend.dart';
 import 'package:honeycube_game_audio/src/audio_cue.dart';
 
-final class HCAudioplayersAudioBackend implements HCAudioBackend {
+final class HCAudioplayersAudioBackend
+    implements HCAudioBackend, HCAudioSfxStartBackend {
   HCAudioplayersAudioBackend({
     AudioCache? cache,
     HCAudioplayersAudioPlayerFactory? playerFactory,
@@ -64,6 +65,15 @@ final class HCAudioplayersAudioBackend implements HCAudioBackend {
 
   @override
   Future<void> playSfx(HCAudioCue cue, {required double volume}) async {
+    final playback = await startSfx(cue, volume: volume);
+    await playback.completed;
+  }
+
+  @override
+  Future<HCAudioSfxPlayback> startSfx(
+    HCAudioCue cue, {
+    required double volume,
+  }) async {
     final player = _createPlayer();
     _sfxPlayers.add(player);
     final sfxStopped = _sfxStopped.future;
@@ -72,6 +82,22 @@ final class HCAudioplayersAudioBackend implements HCAudioBackend {
       await player.setAudioContext(_sfxAudioContext);
       await player.setReleaseMode(ReleaseMode.release);
       await player.play(_assetSource(cue), volume: volume);
+      return _AudioplayersSfxPlayback(
+        _waitForSfxCompletion(player, sfxStopped),
+      );
+    } catch (_) {
+      if (_sfxPlayers.remove(player)) {
+        await player.dispose();
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> _waitForSfxCompletion(
+    HCAudioplayersAudioPlayer player,
+    Future<void> sfxStopped,
+  ) async {
+    try {
       await Future.any([
         player.onPlayerComplete.first,
         _disposed.future,
@@ -184,6 +210,13 @@ final class HCAudioplayersAudioBackend implements HCAudioBackend {
     final path = cue.assetPath;
     return path.startsWith(prefix) ? path.substring(prefix.length) : path;
   }
+}
+
+final class _AudioplayersSfxPlayback implements HCAudioSfxPlayback {
+  const _AudioplayersSfxPlayback(this.completed);
+
+  @override
+  final Future<void> completed;
 }
 
 typedef HCAudioplayersAudioPlayerFactory = HCAudioplayersAudioPlayer Function();
