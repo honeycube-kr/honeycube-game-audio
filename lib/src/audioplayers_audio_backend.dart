@@ -79,11 +79,15 @@ final class HCAudioplayersAudioBackend
     final sfxStopped = _sfxStopped.future;
 
     try {
+      // 짧은 음원이 play 반환 전에 끝나도 완료를 놓치지 않는다.
+      final playerCompleted = player.onPlayerComplete.take(1).drain<void>();
+      // 시작 실패로 반환되지 못한 완료 Future의 오류도 처리한다.
+      playerCompleted.ignore();
       await player.setAudioContext(_sfxAudioContext);
       await player.setReleaseMode(ReleaseMode.release);
       await player.play(_assetSource(cue), volume: volume);
       return _AudioplayersSfxPlayback(
-        _waitForSfxCompletion(player, sfxStopped),
+        _waitForSfxCompletion(player, sfxStopped, playerCompleted),
       );
     } catch (_) {
       if (_sfxPlayers.remove(player)) {
@@ -96,13 +100,10 @@ final class HCAudioplayersAudioBackend
   Future<void> _waitForSfxCompletion(
     HCAudioplayersAudioPlayer player,
     Future<void> sfxStopped,
+    Future<void> playerCompleted,
   ) async {
     try {
-      await Future.any([
-        player.onPlayerComplete.first,
-        _disposed.future,
-        sfxStopped,
-      ]);
+      await Future.any([playerCompleted, _disposed.future, sfxStopped]);
     } finally {
       if (_sfxPlayers.remove(player)) {
         await player.dispose();
